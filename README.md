@@ -53,9 +53,7 @@
 
 Для преобразования датасета из формата YOLO (`data/img.txt` и `images/img.png`)
 
-```python
-python dataset_preparing.py dataset/<DATASET_NAME>/train_set (dataset/<DATASET_NAME>/val_set)
-```
+
 ## Установка + настройка среды
 
 Склонировать репозиторий и войти в папку.
