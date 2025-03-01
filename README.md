@@ -48,7 +48,7 @@
 Склонировать репозиторий и войти в папку.
 
 ```shell
-git clone <repo_name>
+git clone https://github.com/AlexandrNerf/shift-detector-train/yolo-train
 cd fast-train
 ```
 
