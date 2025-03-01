@@ -8,8 +8,8 @@
  
 ```shell
 git clone https://github.com/AlexandrNerf/shift-detector-train/fast-train
-``
+```
 
 ```shell
 git clone https://github.com/AlexandrNerf/shift-detector-train/yolo-train
-``
+```
