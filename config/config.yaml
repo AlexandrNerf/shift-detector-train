@@ -1,0 +1,19 @@
+arch: 'fast_base'
+
+train_path: 'dataset/train_set'
+val_path: 'dataset/val_set'
+
+name: 'Shift FAST model'
+
+
+epochs: 5
+save_interval_epoch: 2
+
+resume: null # For run from some weights use resume: path/to/weights.pt
+
+show_samples: False # Check your dataset before start (don't runs train if True)
+test_only: False # Only validation loop
+
+defaults:
+  - hyperparams: base
+  - logging: base

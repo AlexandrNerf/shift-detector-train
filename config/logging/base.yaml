@@ -1,0 +1,3 @@
+# Wandb and push to hf
+wb: False
+push_to_hub: False
