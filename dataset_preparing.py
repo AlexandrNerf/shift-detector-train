@@ -1,7 +1,4 @@
 import os
-import json
-import hashlib
-import cv2
 import argparse
 import shutil
 
@@ -16,10 +13,10 @@ def split_data(dataset_path, split_coeff):
     images_dir = os.path.join(dataset_path, 'images')
 
     # Пути к папкам для train и val
-    train_data_dir = os.path.join(dataset_path, 'train_set/data')
-    train_images_dir = os.path.join(dataset_path, 'train_set/images')
-    val_data_dir = os.path.join(dataset_path, 'val_set/data')
-    val_images_dir = os.path.join(dataset_path, 'val_set/images')
+    train_data_dir = os.path.join(dataset_path, 'labels/train')
+    train_images_dir = os.path.join(dataset_path, 'images/train')
+    val_data_dir = os.path.join(dataset_path, 'labels/val')
+    val_images_dir = os.path.join(dataset_path, 'images/val')
 
     os.makedirs(train_data_dir, exist_ok=True)
     os.makedirs(train_images_dir, exist_ok=True)
@@ -32,10 +29,23 @@ def split_data(dataset_path, split_coeff):
 
     # Функция для копирования пар файлов
     def copy_files(file_list, src_data_dir, src_images_dir, dst_data_dir, dst_images_dir):
-        for txt_file in file_list:
+        for txt_file in tqdm(file_list, desc='Copying files:'):
             image_file = txt_file.replace('.txt', '.png')  # Замените на нужное расширение, если не png
+            with open(os.path.join(src_data_dir, txt_file), 'r', encoding='utf-8') as f:
+                lines = f.readlines()
 
-            shutil.copy(os.path.join(src_data_dir, txt_file), os.path.join(dst_data_dir, txt_file))
+            # Переписываем строки, меняя формат
+            updated_lines = []
+            for line in lines:
+                parts = line.strip().split()
+                if len(parts) >= 5:
+                    parts[0] = '0' 
+                    updated_lines.append(' '.join(parts) + '\n')
+
+            # Перезаписываем файл
+            with open(os.path.join(dst_data_dir, txt_file), 'w') as f:
+                f.writelines(updated_lines)
+            #shutil.copy(os.path.join(src_data_dir, txt_file), os.path.join(dst_data_dir, txt_file))
 
             if os.path.exists(os.path.join(src_images_dir, image_file)):
                 shutil.copy(os.path.join(src_images_dir, image_file), os.path.join(dst_images_dir, image_file))
@@ -46,30 +56,6 @@ def split_data(dataset_path, split_coeff):
     # Копируем val
     copy_files(val_files, data_dir, images_dir, val_data_dir, val_images_dir)
 
-def compute_sha256(image_path):
-    """Вычисляет SHA-256 хеш файла."""
-    with open(image_path, "rb") as f:
-        return hashlib.sha256(f.read()).hexdigest()
-
-def yolo_to_polygon(yolo_data, img_w, img_h):
-    """Конвертирует YOLO аннотации в список полигонов."""
-    polygons = []
-    for line in yolo_data:
-        parts = line.strip().split()
-        if len(parts) < 5:
-            continue
-        x, y, w, h = map(float, parts[1:])
-        x, w = x * img_w, w * img_w
-        y, h = y * img_h, h * img_h
-
-        # Восстанавливаем координаты углов прямоугольника
-        x1, y1 = x - w / 2, y - h / 2
-        x2, y2 = x + w / 2, y - h / 2
-        x3, y3 = x + w / 2, y + h / 2
-        x4, y4 = x - w / 2, y + h / 2
-        polygons.append([[x1, y1], [x2, y2], [x3, y3], [x4, y4]])
-
-    return polygons
 
 def find_files(root_dir, extensions):
     """Рекурсивно находит файлы с заданными расширениями."""
@@ -80,48 +66,6 @@ def find_files(root_dir, extensions):
                 files.append(os.path.join(dirpath, filename))
     return files
 
-def convert_dataset(dataset_path, desc='TRAIN'):
-    """Обрабатывает датасет и сохраняет JSON."""
-    images_dir = os.path.join(dataset_path, "images")
-    annotations_dir = os.path.join(dataset_path, "data")
-
-    if not os.path.exists(images_dir) or not os.path.exists(annotations_dir):
-        print("Ошибка: Ожидается структура с папками 'images/' и 'data/'")
-        return
-
-    images = find_files(images_dir, (".png", ".jpg", ".jpeg"))
-    annotations = find_files(annotations_dir, (".txt",))
-
-    annotation_map = {os.path.splitext(os.path.basename(f))[0]: f for f in annotations}
-    dataset = {}
-
-    for image_path in tqdm(images, desc=f'Creating labels for {desc} dataset:'):
-        image_name = os.path.basename(image_path)
-        image_id = os.path.splitext(image_name)[0]
-
-        img = cv2.imread(image_path)
-        if img is None:
-            continue
-        img_h, img_w = img.shape[:2]
-
-        img_hash = compute_sha256(image_path)
-        annotation_path = annotation_map.get(image_id, None)
-
-        polygons = []
-        if annotation_path:
-            with open(annotation_path, "r", encoding="utf-8") as f:
-                polygons = yolo_to_polygon(f.readlines(), img_w, img_h)
-        if len(polygons) > 0:
-            dataset[image_name] = {
-                "img_dimensions": (img_h, img_w),
-                "img_hash": img_hash,
-                "polygons": polygons
-            }
-
-    with open(os.path.join(dataset_path, 'labels.json'), "w", encoding="utf-8") as f:
-        json.dump(dataset, f, indent=4, ensure_ascii=False)
-
-    print(f"JSON сохранен в {os.path.join(dataset_path, 'labels.json')}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Конвертация YOLO аннотаций в JSON")
@@ -133,6 +77,3 @@ if __name__ == "__main__":
     if args.train_val_split > 1.0 or args.train_val_split < 0:
         raise Exception("Coeff of splitting should be > 0.0 and < 1.0")
     split_data(args.dataset_path, args.train_val_split)
-
-    convert_dataset(os.path.join(args.dataset_path, 'train_set'))
-    convert_dataset(os.path.join(args.dataset_path, 'val_set'), desc='VAL')

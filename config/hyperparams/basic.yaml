@@ -1,0 +1,21 @@
+optimizer: 'auto' # You can use also `sgd`, `rmse` or `adam`
+imgsz: 1024
+batch: 2
+
+lr0: 0.01
+lrf: 0.01
+weight_decay: 0.0001
+
+warmup_epochs: 3.0
+warmup_momentum: 0.8
+warmup_bias_lr: 0.1
+
+single_cls: False
+cos_lr: True
+multi_scale: False
+
+box: 7.5
+cls: 0.5
+
+conf: 0.25
+iou: 0.7

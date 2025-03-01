@@ -1,19 +1,13 @@
-arch: 'fast_base'
+model: 'yolov8n'
+resume: False
 
-train_path: 'dataset/train_set'
-val_path: 'dataset/val_set'
+data: 'dataset/data.yaml'
+project: './runs'
 
-name: 'Shift FAST model'
-
-
-epochs: 5
-save_interval_epoch: 2
-
-resume: null # For run from some weights use resume: path/to/weights.pt
-
-show_samples: False # Check your dataset before start (don't runs train if True)
-test_only: False # Only validation loop
+epochs: 10 
 
 defaults:
-  - hyperparams: base
-  - logging: base
+  - hyperparams: basic
+  - augmentations: weak
+  - logger: none
+  - functional: solo_gpu

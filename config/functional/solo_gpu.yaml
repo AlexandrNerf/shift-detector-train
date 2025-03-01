@@ -1,0 +1,9 @@
+device: 'cuda'
+workers: 0
+amp: False
+cache: False
+
+save: True
+save_period: -1
+plots: False
+val: True

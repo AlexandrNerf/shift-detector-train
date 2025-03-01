@@ -1,3 +1,5 @@
-/dataset/train_set
-/dataset/val_set
+/dataset/data
+/dataset/images
+/dataset/labels
+/runs
 /outputs

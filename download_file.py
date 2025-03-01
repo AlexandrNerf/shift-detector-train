@@ -3,7 +3,7 @@ import minio
 import argparse
 import json
 
-from util.downloader_utils import Progress
+from .utils.downloader_utils import Progress
 
 def main(files, destination):
     """

@@ -1,67 +1,54 @@
-# Тренировочный скрипт для FAST text detection
+# Тренировочный скрипт для YOLO text detection
 
-Скрипт для обучения FAST на PyTorch. Взято из библиотеки `doctr`
+Скрипт для обучения YOLO на PyTorch. Взято из библиотеки `ultralytics`
 
 ## Структура репозитория
 
 ```
-├───dataset
-│   ├───train_set
-│   └───val_set
 ├───config
+│   ├───augmentations
+│   ├───functional
 │   ├───hyperparams
-│   └───logging
-├───util
+│   └───logger
+├───dataset
+│   ├───images
+│   │   ├───train
+│   │   └───val
+│   └───labels
+│       ├───train
+│       └───val
+├───outputs
+├───runs
+├───utils
 ├───dataset_preparing.py
 ├───download_file.py
 └───train.py
 ```
 
-Настройки обучения хранятся в папке `config` (`config.yaml` и прилегающие папки `hyperparams` и `logging` со своими отдельными файлами). В `utils` располагаются дополнительные скрипты, а в `dataset` данные.
+Настройки обучения хранятся в папке `config` (`config.yaml` и прилегающие папки со своими отдельными файлами). В `utils` располагаются дополнительные скрипты, а в `dataset` данные в классическом формате YOLO.
 
 
-Папка с датасетом после преобразований будет иметь следующий вид:
-
-```shell
-├── images
-│   ├── sample_img_01.png
-│   ├── sample_img_02.png
-│   ├── sample_img_03.png
-│   └── ...
-└── labels.json
-```
-
-Где `labels.json` содержит:
+Папка с датасетом YOLO:
 
 ```shell
-{
-    "sample_img_01.png" = {
-        'img_dimensions': (900, 600),
-        'img_hash': "theimagedumpmyhash",
-        'polygons': [[[x1, y1], [x2, y2], [x3, y3], [x4, y4]], ...]
-     },
-     "sample_img_02.png" = {
-        'img_dimensions': (900, 600),
-        'img_hash': "thisisahash",
-        'polygons': [[[x1, y1], [x2, y2], [x3, y3], [x4, y4]], ...]
-     }
-     ...
-}
+├───images
+│   ├───train
+│   └───val
+└───labels
+│   ├───train
+│   └───val
+└── data.yaml
 ```
 
-Словарь, на каждое изображение (название png файла) - `img_dimensions` (Ширина и высота файла), `img_hash` (SHA256 изображения), `polygons` (Набор абсолютных координат бокса или полигона). 
+Где `data.json` содержит пути до `train` и `val`, а также обозначения классов
 
-Для преобразования датасета из формата YOLO (`data/img.txt` и `images/img.png`)
 
-```python
-python dataset_preparing.py dataset/<DATASET_NAME>/train_set (dataset/<DATASET_NAME>/val_set)
-```
 ## Установка + настройка среды
 
 Склонировать репозиторий и войти в папку.
 
 ```shell
-git clone https://github.com/AlexandrNerf/shift-detector-train/fast-train
+git clone <repo_name>
 cd fast-train
 ```
 
@@ -98,7 +85,7 @@ cd ../
 
 Должны получиться две папки - `data` и `images`
 
-Теперь запускаем процесс форматирования данных для `FAST`
+Теперь запускаем процесс форматирования данных для `YOLO`
 
 ```shell
 python dataset_preparing 0.2
@@ -106,7 +93,7 @@ python dataset_preparing 0.2
 
 Аргумент - это размер валидационной выборки
 
-В результате работы скрипта - разбиение на трейн и валидацию + создание файлов labels.json
+В результате работы скрипта - разбиение на трейн и валидацию и приведение к нужному виду (нулевые классы)
 
 ## Использование
 
@@ -116,4 +103,4 @@ python dataset_preparing 0.2
 python train.py
 ```
 
-Настройка параметров происходит в конфигах. В `config.yaml` собраны самые главные и часто изменяемые (такие как число эпох, базовая модель для обучения или запуск с уже обученных весов). В папках (hyperparams и logging) отдельно лежат конфиги для параметров модели, которые можно создавать и менять в главном конфиге.
+Настройка параметров происходит в конфигах. В `config.yaml` собраны самые главные и часто изменяемые (такие как число эпох, базовая модель для обучения или запуск с уже обученных весов). В папках отдельно лежат конфиги для параметров модели, которые можно создавать и менять в главном конфиге.
