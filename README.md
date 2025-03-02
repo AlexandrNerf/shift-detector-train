@@ -49,7 +49,7 @@
 
 ```shell
 git clone https://github.com/AlexandrNerf/shift-detector-train/yolo-train
-cd fast-train
+cd yolo-train
 ```
 
 Рекомендуется использовать `Anaconda` для работы.
@@ -80,6 +80,16 @@ cd dataset
 unzip DDI_new.zip
 unzip PDFA_new.zip
 7z x SROIE.7z
+cd ../
+```
+
+На Windows:
+
+```shell
+cd dataset
+tar -xf DDI_new.zip
+tar -xf PDFA_new.zip
+tar -xf SROIE.7z
 cd ../
 ```
 

@@ -3,7 +3,7 @@ import minio
 import argparse
 import json
 
-from .utils.downloader_utils import Progress
+from util.downloader_utils import Progress
 
 def main(files, destination):
     """
@@ -19,12 +19,12 @@ def main(files, destination):
     bucket_name = 'shift-recognition-symbols'
 
     found = client.bucket_exists(bucket_name)
-    result = os.path.join(destination, file) if destination else file
     if not found:
         raise Exception('Error, no such bucket!')
     else:
         print('Successfully found. Now downloading...')
         for file in files:
+            result = os.path.join(destination, file) if destination else file
             client.fget_object(bucket_name, file, result, progress=Progress())
 
 if __name__ == '__main__':
@@ -36,7 +36,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     try:
         with open('credentials.json', 'r') as cred:
-            info = json(cred)
+            info = json.load(cred)
             ACCESS_KEY = info['accessKey']
             SECRET_KEY = info['secretKey']
         print('Successfully got keys from credentials.json')
