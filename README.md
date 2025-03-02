@@ -48,8 +48,8 @@
 Склонировать репозиторий и войти в папку.
 
 ```shell
-git clone https://github.com/AlexandrNerf/shift-detector-train/yolo-train
-cd yolo-train
+git clone -b yolo-train --single-branch https://github.com/AlexandrNerf/shift-detector-train.git
+cd shift-detector-train
 ```
 
 Рекомендуется использовать `Anaconda` для работы.
