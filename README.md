@@ -59,8 +59,8 @@
 Склонировать репозиторий и войти в папку.
 
 ```shell
-git clone https://github.com/AlexandrNerf/shift-detector-train/fast-train
-cd fast-train
+git clone -b fast-train --single-branch https://github.com/AlexandrNerf/shift-detector-train.git
+cd shift-detector-train
 ```
 
 Рекомендуется использовать `Anaconda` для работы.
