@@ -137,7 +137,7 @@ def format_string(current_size, total_length, elapsed_time):
 
     rate = _RATE_FORMAT % (
         n_to_mb / elapsed_time) if elapsed_time else _UNKNOWN_SIZE
-    frac = float(current_size) / total_length
+    frac = float(current_size) / (total_length+1)
     bar_length = int(frac * _BAR_SIZE)
     bar = (_FINISHED_BAR * bar_length +
            _REMAINING_BAR * (_BAR_SIZE - bar_length))
