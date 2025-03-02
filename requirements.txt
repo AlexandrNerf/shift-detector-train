@@ -2,3 +2,5 @@ ultralytics
 minio
 tqdm
 scikit-learn
+hydra-core
+omegaconf
