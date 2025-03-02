@@ -94,6 +94,16 @@ unzip PDFA_new.zip
 cd ../
 ```
 
+Для Windows:
+
+```shell
+cd dataset
+tar -xf DDI_new.zip
+tar -xf PDFA_new.zip
+tar -xf SROIE.7z
+cd ../
+```
+
 Должны получиться две папки - `data` и `images`
 
 Теперь запускаем процесс форматирования данных для `FAST`
