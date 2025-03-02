@@ -58,7 +58,7 @@ cd yolo-train
 ```shell
 conda create --name <ENV_NAME> python=3.12.8
 conda activate <ENV_NAME>
-pip install -f requirements.txt
+pip install -r requirements.txt
 ```
 
 ## Скачивание и подготовка данных
