@@ -58,7 +58,12 @@ def yolo_to_polygon(yolo_data, img_w, img_h):
         parts = line.strip().split()
         if len(parts) < 5:
             continue
-        x, y, w, h = map(float, parts[1:])
+        try:
+          x, y, w, h = map(float, parts[1:])
+        except:
+          continue
+        if x > 1.0 or x < 0.0 or y > 1.0 or y < 0.0 or w > 1.0 or w < 0.0 or h > 1.0 or h < 0.0:
+          continue
         x, w = x * img_w, w * img_w
         y, h = y * img_h, h * img_h
 
