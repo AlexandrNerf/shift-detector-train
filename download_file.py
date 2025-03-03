@@ -1,9 +1,11 @@
-import os
-import minio
 import argparse
 import json
+import os
+
+import minio
 
 from util.downloader_utils import Progress
+
 
 def main(files, destination):
     """
@@ -13,7 +15,7 @@ def main(files, destination):
         endpoint='shift-minio.yc.ftc.ru',
         access_key=ACCESS_KEY,
         secret_key=SECRET_KEY,
-        region='russia'
+        region='russia',
     )
 
     bucket_name = 'shift-recognition-symbols'
@@ -27,11 +29,18 @@ def main(files, destination):
             result = os.path.join(destination, file) if destination else file
             client.fget_object(bucket_name, file, result, progress=Progress())
 
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
-    #parser.add_argument('file', type=str, help='Название скачиваемого файла')
-    parser.add_argument('--destination', type=str, default='dataset', required=False, help='Куда скачать файл')
+    # parser.add_argument('file', type=str, help='Название скачиваемого файла')
+    parser.add_argument(
+        '--destination',
+        type=str,
+        default='dataset',
+        required=False,
+        help='Куда скачать файл',
+    )
 
     args = parser.parse_args()
     try:
