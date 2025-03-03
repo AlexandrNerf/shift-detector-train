@@ -7,7 +7,7 @@ import minio
 from util.downloader_utils import Progress
 
 
-def main(files, destination):
+def main(files):
     """
     Запуск клиента minIO и скачивание датасетов
     """
@@ -24,7 +24,7 @@ def main(files, destination):
     if not found:
         raise Exception('Error, no such bucket!')
     else:
-        print('Successfully found. Now downloading...')
+        print(f'Successfully found bucket named {bucket_name}. Now downloading...')
         for file in files:
             client.fget_object(bucket_name, file, file, progress=Progress())
 
@@ -33,13 +33,6 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     parser.add_argument('file', type=str, help='Название скачиваемого файла')
-    parser.add_argument(
-        '--destination',
-        type=str,
-        default='dataset',
-        required=False,
-        help='Куда скачать файл',
-    )
 
     args = parser.parse_args()
     try:
@@ -51,4 +44,4 @@ if __name__ == '__main__':
     except:
         raise Exception('Error finding your access keys!')
 
-    main([args.file], args.destination)
+    main([args.file])
