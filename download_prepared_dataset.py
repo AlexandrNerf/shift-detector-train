@@ -26,7 +26,6 @@ def main(files, destination):
     else:
         print('Successfully found. Now downloading...')
         for file in files:
-            result = os.path.join(destination, file) if destination else file
             client.fget_object(bucket_name, file, file, progress=Progress())
 
 
