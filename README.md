@@ -91,6 +91,7 @@ cd dataset
 unzip DDI_new.zip
 unzip PDFA_new.zip
 7z x SROIE.7z
+rm -rf *.zip *.7z
 cd ../
 ```
 
