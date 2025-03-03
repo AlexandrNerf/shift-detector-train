@@ -7,23 +7,6 @@ from ultralytics import YOLO, settings
 def main(cfg: DictConfig):
     print('Args:', cfg)
 
-    # Setting all loggers with config
-    settings.update(
-        {
-            'datasets_dir': '',
-            'mlflow': cfg.logger.mlflow,
-            'wandb': cfg.logger.wandb,
-            'tensorboard': cfg.logger.tensorboard,
-            'clearml': cfg.logger.clearml,
-            'comet': cfg.logger.comet,
-            'dvc': cfg.logger.dvc,
-            'hub': cfg.logger.hub,
-            'neptune': cfg.logger.neptune,
-            'raytune': cfg.logger.raytune,
-            'vscode_msg': cfg.logger.vscode_msg,
-        }
-    )
-
     model = YOLO(cfg.model)
 
     model.train(
