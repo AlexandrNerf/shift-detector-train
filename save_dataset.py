@@ -24,7 +24,7 @@ def main(file):
     if not found:
         raise Exception('Error, no such bucket!')
     else:
-        print('Successfully found. Now downloading...')
+        print(f'Successfully found bucket named {bucket_name}. Now uploading...')
         client.fput_object(bucket_name, file, file, progress=Progress())
 
 

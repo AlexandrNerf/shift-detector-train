@@ -24,7 +24,7 @@ def main(files, destination):
     if not found:
         raise Exception("Error, no such bucket!")
     else:
-        print("Successfully found bucket. Now downloading...")
+        print(f'Successfully found bucket named {bucket_name}. Now downloading...')
         for file in files:
             result = os.path.join(destination, file) if destination else file
             client.fget_object(bucket_name, file, result, progress=Progress())
