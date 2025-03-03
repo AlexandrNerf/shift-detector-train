@@ -30,7 +30,9 @@ def plot_samples(images, targets: List[Dict[str, np.ndarray]]) -> None:
                 if boxes.ndim == 3:
                     cv2.fillPoly(target, [np.int0(box)], 1)
                 else:
-                    target[int(box[1]) : int(box[3]) + 1, int(box[0]) : int(box[2]) + 1] = 1
+                    target[
+                        int(box[1]) : int(box[3]) + 1, int(box[0]) : int(box[2]) + 1
+                    ] = 1
         if nb_samples > 1:
             axes[0][idx].imshow(img)
             axes[1][idx].imshow(target.astype(bool))
@@ -56,7 +58,9 @@ def plot_recorder(lr_recorder, loss_recorder, beta: float = 0.95, **kwargs) -> N
         **kwargs: keyword arguments from `matplotlib.pyplot.show`
     """
     if len(lr_recorder) != len(loss_recorder) or len(lr_recorder) == 0:
-        raise AssertionError("Both `lr_recorder` and `loss_recorder` should have the same length")
+        raise AssertionError(
+            "Both `lr_recorder` and `loss_recorder` should have the same length"
+        )
 
     # Exp moving average of loss
     smoothed_losses = []

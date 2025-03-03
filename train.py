@@ -12,22 +12,34 @@ import hashlib
 import logging
 import multiprocessing as mp
 import time
-import hydra 
-from omegaconf import OmegaConf, DictConfig
 
+import hydra
 import numpy as np
 import torch
 import wandb
-from torch.optim.lr_scheduler import CosineAnnealingLR, MultiplicativeLR, OneCycleLR, PolynomialLR
-from torch.utils.data import DataLoader, RandomSampler, SequentialSampler
-from torchvision.transforms.v2 import Compose, GaussianBlur, Normalize, RandomGrayscale, RandomPhotometricDistort
-from tqdm.auto import tqdm
-
 from doctr import transforms as T
 from doctr.datasets import DetectionDataset
 from doctr.models import detection, login_to_hub, push_to_hf_hub
 from doctr.utils.metrics import LocalizationConfusion
+from omegaconf import DictConfig, OmegaConf
+from torch.optim.lr_scheduler import (
+    CosineAnnealingLR,
+    MultiplicativeLR,
+    OneCycleLR,
+    PolynomialLR,
+)
+from torch.utils.data import DataLoader, RandomSampler, SequentialSampler
+from torchvision.transforms.v2 import (
+    Compose,
+    GaussianBlur,
+    Normalize,
+    RandomGrayscale,
+    RandomPhotometricDistort,
+)
+from tqdm.auto import tqdm
+
 from util.utils import EarlyStopper, plot_recorder, plot_samples
+
 
 def record_lr(
     model: torch.nn.Module,
@@ -43,7 +55,9 @@ def record_lr(
     Adapted from https://github.com/frgfm/Holocron/blob/master/holocron/trainer/core.py
     """
     if num_it > len(train_loader):
-        raise ValueError("the value of `num_it` needs to be lower than the number of available batches")
+        raise ValueError(
+            "the value of `num_it` needs to be lower than the number of available batches"
+        )
 
     model = model.train()
     # Update param groups & LR
@@ -100,7 +114,9 @@ def record_lr(
     return lr_recorder[: len(loss_recorder)], loss_recorder
 
 
-def fit_one_epoch(model, train_loader, batch_transforms, optimizer, scheduler, amp=False):
+def fit_one_epoch(
+    model, train_loader, batch_transforms, optimizer, scheduler, amp=False
+):
     if amp:
         scaler = torch.cuda.amp.GradScaler()
 
@@ -135,7 +151,6 @@ def fit_one_epoch(model, train_loader, batch_transforms, optimizer, scheduler, a
 
 
 @torch.no_grad()
-
 def evaluate(cfg, model, val_loader, batch_transforms, val_metric, amp=False):
     # Model in eval mode
     model.eval()
@@ -158,7 +173,10 @@ def evaluate(cfg, model, val_loader, batch_transforms, val_metric, amp=False):
             for boxes_gt, boxes_pred in zip(target.values(), loc_pred.values()):
                 if cfg.hyperparams.rotation and cfg.hyperparams.eval_straight:
                     # Convert pred to boxes [xmin, ymin, xmax, ymax]  N, 5, 2 (with scores) --> N, 4
-                    boxes_pred = np.concatenate((boxes_pred[:, :4].min(axis=1), boxes_pred[:, :4].max(axis=1)), axis=-1)
+                    boxes_pred = np.concatenate(
+                        (boxes_pred[:, :4].min(axis=1), boxes_pred[:, :4].max(axis=1)),
+                        axis=-1,
+                    )
                 val_metric.update(gts=boxes_gt, preds=boxes_pred[:, :4])
 
         val_loss += out["loss"].item()
@@ -168,7 +186,8 @@ def evaluate(cfg, model, val_loader, batch_transforms, val_metric, amp=False):
     recall, precision, mean_iou = val_metric.summary()
     return val_loss, recall, precision, mean_iou
 
-@hydra.main(version_base=None, config_path="config", config_name='config.yaml')
+
+@hydra.main(version_base=None, config_path="config", config_name="config.yaml")
 def main(cfg: DictConfig):
     print(cfg)
 
@@ -186,15 +205,27 @@ def main(cfg: DictConfig):
         label_path=os.path.join(cfg.val_path, "labels.json"),
         sample_transforms=T.SampleCompose(
             (
-                [T.Resize((cfg.hyperparams.input_size, cfg.hyperparams.input_size), preserve_aspect_ratio=True, symmetric_pad=True)]
+                [
+                    T.Resize(
+                        (cfg.hyperparams.input_size, cfg.hyperparams.input_size),
+                        preserve_aspect_ratio=True,
+                        symmetric_pad=True,
+                    )
+                ]
                 if not cfg.hyperparams.rotation or cfg.hyperparams.eval_straight
                 else []
             )
             + (
                 [
-                    T.Resize(cfg.hyperparams.input_size, preserve_aspect_ratio=True),  # This does not pad
+                    T.Resize(
+                        cfg.hyperparams.input_size, preserve_aspect_ratio=True
+                    ),  # This does not pad
                     T.RandomApply(T.RandomRotate(90, expand=True), 0.5),
-                    T.Resize((cfg.hyperparams.input_size, cfg.hyperparams.input_size), preserve_aspect_ratio=True, symmetric_pad=True),
+                    T.Resize(
+                        (cfg.hyperparams.input_size, cfg.hyperparams.input_size),
+                        preserve_aspect_ratio=True,
+                        symmetric_pad=True,
+                    ),
                 ]
                 if cfg.hyperparams.rotation and not cfg.hyperparams.eval_straight
                 else []
@@ -211,7 +242,10 @@ def main(cfg: DictConfig):
         pin_memory=torch.cuda.is_available(),
         collate_fn=val_set.collate_fn,
     )
-    print(f"Validation set loaded in {time.time() - st:.4}s ({len(val_set)} samples in " f"{len(val_loader)} batches)")
+    print(
+        f"Validation set loaded in {time.time() - st:.4}s ({len(val_set)} samples in "
+        f"{len(val_loader)} batches)"
+    )
     with open(os.path.join(cfg.val_path, "labels.json"), "rb") as f:
         val_hash = hashlib.sha256(f.read()).hexdigest()
 
@@ -246,11 +280,20 @@ def main(cfg: DictConfig):
         model = model.cuda()
 
     # Metrics
-    val_metric = LocalizationConfusion(use_polygons=cfg.hyperparams.rotation and not cfg.hyperparams.eval_straight)
+    val_metric = LocalizationConfusion(
+        use_polygons=cfg.hyperparams.rotation and not cfg.hyperparams.eval_straight
+    )
 
     if cfg.test_only:
         print("Running evaluation")
-        val_loss, recall, precision, mean_iou = evaluate(cfg, model, val_loader, batch_transforms, val_metric, amp=cfg.hyperparams.amp)
+        val_loss, recall, precision, mean_iou = evaluate(
+            cfg,
+            model,
+            val_loader,
+            batch_transforms,
+            val_metric,
+            amp=cfg.hyperparams.amp,
+        )
         print(
             f"Validation loss: {val_loss:.6} (Recall: {recall:.2%} | Precision: {precision:.2%} | "
             f"Mean IoU: {mean_iou:.2%})"
@@ -260,42 +303,70 @@ def main(cfg: DictConfig):
     st = time.time()
     # Augmentations
     # Image augmentations
-    img_transforms = T.OneOf([
-        Compose([
-            T.RandomApply(T.ColorInversion(), 0.3),
-            T.RandomApply(GaussianBlur(kernel_size=5, sigma=(0.1, 4)), 0.2),
-        ]),
-        Compose([
-            T.RandomApply(T.RandomShadow(), 0.3),
-            T.RandomApply(T.GaussianNoise(), 0.1),
-            T.RandomApply(GaussianBlur(kernel_size=5, sigma=(0.1, 4)), 0.3),
-            RandomGrayscale(p=0.15),
-        ]),
-        RandomPhotometricDistort(p=0.3),
-        lambda x: x,  # Identity no transformation
-    ])
+    img_transforms = T.OneOf(
+        [
+            Compose(
+                [
+                    T.RandomApply(T.ColorInversion(), 0.3),
+                    T.RandomApply(GaussianBlur(kernel_size=5, sigma=(0.1, 4)), 0.2),
+                ]
+            ),
+            Compose(
+                [
+                    T.RandomApply(T.RandomShadow(), 0.3),
+                    T.RandomApply(T.GaussianNoise(), 0.1),
+                    T.RandomApply(GaussianBlur(kernel_size=5, sigma=(0.1, 4)), 0.3),
+                    RandomGrayscale(p=0.15),
+                ]
+            ),
+            RandomPhotometricDistort(p=0.3),
+            lambda x: x,  # Identity no transformation
+        ]
+    )
     # Image + target augmentations
     sample_transforms = T.SampleCompose(
         (
             [
                 T.RandomHorizontalFlip(0.15),
-                T.OneOf([
-                    T.RandomApply(T.RandomCrop(ratio=(0.6, 1.33)), 0.25),
-                    T.RandomResize(scale_range=(0.4, 0.9), preserve_aspect_ratio=0.5, symmetric_pad=0.5, p=0.25),
-                ]),
-                T.Resize((cfg.hyperparams.input_size, cfg.hyperparams.input_size), preserve_aspect_ratio=True, symmetric_pad=True),
+                T.OneOf(
+                    [
+                        T.RandomApply(T.RandomCrop(ratio=(0.6, 1.33)), 0.25),
+                        T.RandomResize(
+                            scale_range=(0.4, 0.9),
+                            preserve_aspect_ratio=0.5,
+                            symmetric_pad=0.5,
+                            p=0.25,
+                        ),
+                    ]
+                ),
+                T.Resize(
+                    (cfg.hyperparams.input_size, cfg.hyperparams.input_size),
+                    preserve_aspect_ratio=True,
+                    symmetric_pad=True,
+                ),
             ]
             if not cfg.hyperparams.rotation
             else [
                 T.RandomHorizontalFlip(0.15),
-                T.OneOf([
-                    T.RandomApply(T.RandomCrop(ratio=(0.6, 1.33)), 0.25),
-                    T.RandomResize(scale_range=(0.4, 0.9), preserve_aspect_ratio=0.5, symmetric_pad=0.5, p=0.25),
-                ]),
+                T.OneOf(
+                    [
+                        T.RandomApply(T.RandomCrop(ratio=(0.6, 1.33)), 0.25),
+                        T.RandomResize(
+                            scale_range=(0.4, 0.9),
+                            preserve_aspect_ratio=0.5,
+                            symmetric_pad=0.5,
+                            p=0.25,
+                        ),
+                    ]
+                ),
                 # Rotation augmentation
                 T.Resize(cfg.hyperparams.input_size, preserve_aspect_ratio=True),
                 T.RandomApply(T.RandomRotate(90, expand=True), 0.5),
-                T.Resize((cfg.hyperparams.input_size, cfg.hyperparams.input_size), preserve_aspect_ratio=True, symmetric_pad=True),
+                T.Resize(
+                    (cfg.hyperparams.input_size, cfg.hyperparams.input_size),
+                    preserve_aspect_ratio=True,
+                    symmetric_pad=True,
+                ),
             ]
         )
     )
@@ -318,7 +389,10 @@ def main(cfg: DictConfig):
         pin_memory=torch.cuda.is_available(),
         collate_fn=train_set.collate_fn,
     )
-    print(f"Train set loaded in {time.time() - st:.4}s ({len(train_set)} samples in " f"{len(train_loader)} batches)")
+    print(
+        f"Train set loaded in {time.time() - st:.4}s ({len(train_set)} samples in "
+        f"{len(train_loader)} batches)"
+    )
     with open(os.path.join(cfg.train_path, "labels.json"), "rb") as f:
         train_hash = hashlib.sha256(f.read()).hexdigest()
 
@@ -342,14 +416,20 @@ def main(cfg: DictConfig):
     )
     # LR Finder
     if cfg.hyperparams.find_lr:
-        lrs, losses = record_lr(model, train_loader, batch_transforms, optimizer, amp=cfg.hyperparams.amp)
+        lrs, losses = record_lr(
+            model, train_loader, batch_transforms, optimizer, amp=cfg.hyperparams.amp
+        )
         plot_recorder(lrs, losses)
         return
     # Scheduler
     if cfg.hyperparams.sched == "cosine":
-        scheduler = CosineAnnealingLR(optimizer, cfg.epochs * len(train_loader), eta_min=cfg.hyperparams.lr / 25e4)
+        scheduler = CosineAnnealingLR(
+            optimizer, cfg.epochs * len(train_loader), eta_min=cfg.hyperparams.lr / 25e4
+        )
     elif cfg.hyperparams.sched == "onecycle":
-        scheduler = OneCycleLR(optimizer, cfg.hyperparams.lr, cfg.epochs * len(train_loader))
+        scheduler = OneCycleLR(
+            optimizer, cfg.hyperparams.lr, cfg.epochs * len(train_loader)
+        )
     elif cfg.hyperparams.sched == "poly":
         scheduler = PolynomialLR(optimizer, cfg.epochs * len(train_loader))
 
@@ -383,15 +463,34 @@ def main(cfg: DictConfig):
     # Create loss queue
     min_loss = np.inf
     if cfg.hyperparams.early_stop:
-        early_stopper = EarlyStopper(patience=cfg.hyperparams.early_stop_epochs, min_delta=cfg.hyperparams.early_stop_delta)
+        early_stopper = EarlyStopper(
+            patience=cfg.hyperparams.early_stop_epochs,
+            min_delta=cfg.hyperparams.early_stop_delta,
+        )
 
     # Training loop
     for epoch in range(cfg.epochs):
-        fit_one_epoch(model, train_loader, batch_transforms, optimizer, scheduler, amp=cfg.hyperparams.amp)
+        fit_one_epoch(
+            model,
+            train_loader,
+            batch_transforms,
+            optimizer,
+            scheduler,
+            amp=cfg.hyperparams.amp,
+        )
         # Validation loop at the end of each epoch
-        val_loss, recall, precision, mean_iou = evaluate(cfg, model, val_loader, batch_transforms, val_metric, amp=cfg.hyperparams.amp)
+        val_loss, recall, precision, mean_iou = evaluate(
+            cfg,
+            model,
+            val_loader,
+            batch_transforms,
+            val_metric,
+            amp=cfg.hyperparams.amp,
+        )
         if val_loss < min_loss:
-            print(f"Validation loss decreased {min_loss:.6} --> {val_loss:.6}: saving state...")
+            print(
+                f"Validation loss decreased {min_loss:.6} --> {val_loss:.6}: saving state..."
+            )
             torch.save(model.state_dict(), f"./{exp_name}.pt")
             min_loss = val_loss
         if cfg.save_interval_epoch:
@@ -405,12 +504,14 @@ def main(cfg: DictConfig):
         print(log_msg)
         # W&B
         if cfg.logging.wb:
-            wandb.log({
-                "val_loss": val_loss,
-                "recall": recall,
-                "precision": precision,
-                "mean_iou": mean_iou,
-            })
+            wandb.log(
+                {
+                    "val_loss": val_loss,
+                    "recall": recall,
+                    "precision": precision,
+                    "mean_iou": mean_iou,
+                }
+            )
         if cfg.hyperparams.early_stop and early_stopper.early_stop(val_loss):
             print("Training halted early due to reaching patience limit.")
             break
@@ -430,53 +531,126 @@ def parse_args():
     )
 
     parser.add_argument("arch", type=str, help="text-detection model to train")
-    parser.add_argument("--train_path", type=str, required=True, help="path to training data folder")
-    parser.add_argument("--val_path", type=str, required=True, help="path to validation data folder")
-    parser.add_argument("--name", type=str, default=None, help="Name of your training experiment")
-    parser.add_argument("--epochs", type=int, default=10, help="number of epochs to train the model on")
-    parser.add_argument("-b", "--batch_size", type=int, default=2, help="batch size for training")
+    parser.add_argument(
+        "--train_path", type=str, required=True, help="path to training data folder"
+    )
+    parser.add_argument(
+        "--val_path", type=str, required=True, help="path to validation data folder"
+    )
+    parser.add_argument(
+        "--name", type=str, default=None, help="Name of your training experiment"
+    )
+    parser.add_argument(
+        "--epochs", type=int, default=10, help="number of epochs to train the model on"
+    )
+    parser.add_argument(
+        "-b", "--batch_size", type=int, default=2, help="batch size for training"
+    )
     parser.add_argument("--device", default=None, type=int, help="device")
     parser.add_argument(
-        "--save-interval-epoch", dest="save_interval_epoch", action="store_true", help="Save model every epoch"
-    )
-    parser.add_argument("--input_size", type=int, default=1024, help="model input size, H = W")
-    parser.add_argument("--lr", type=float, default=0.001, help="learning rate for the optimizer (Adam)")
-    parser.add_argument("--wd", "--weight-decay", default=0, type=float, help="weight decay", dest="weight_decay")
-    parser.add_argument("-j", "--workers", type=int, default=0, help="number of workers used for dataloading")
-    parser.add_argument("--resume", type=str, default=None, help="Path to your checkpoint")
-    parser.add_argument("--test-only", dest="test_only", action="store_true", help="Run the validation loop")
-    parser.add_argument(
-        "--freeze-backbone", dest="freeze_backbone", action="store_true", help="freeze model backbone for fine-tuning"
+        "--save-interval-epoch",
+        dest="save_interval_epoch",
+        action="store_true",
+        help="Save model every epoch",
     )
     parser.add_argument(
-        "--show-samples", dest="show_samples", action="store_true", help="Display unormalized training samples"
+        "--input_size", type=int, default=1024, help="model input size, H = W"
     )
-    parser.add_argument("--wb", dest="wb", action="store_true", help="Log to Weights & Biases")
-    parser.add_argument("--push-to-hub", dest="push_to_hub", action="store_true", help="Push to Huggingface Hub")
+    parser.add_argument(
+        "--lr", type=float, default=0.001, help="learning rate for the optimizer (Adam)"
+    )
+    parser.add_argument(
+        "--wd",
+        "--weight-decay",
+        default=0,
+        type=float,
+        help="weight decay",
+        dest="weight_decay",
+    )
+    parser.add_argument(
+        "-j",
+        "--workers",
+        type=int,
+        default=0,
+        help="number of workers used for dataloading",
+    )
+    parser.add_argument(
+        "--resume", type=str, default=None, help="Path to your checkpoint"
+    )
+    parser.add_argument(
+        "--test-only",
+        dest="test_only",
+        action="store_true",
+        help="Run the validation loop",
+    )
+    parser.add_argument(
+        "--freeze-backbone",
+        dest="freeze_backbone",
+        action="store_true",
+        help="freeze model backbone for fine-tuning",
+    )
+    parser.add_argument(
+        "--show-samples",
+        dest="show_samples",
+        action="store_true",
+        help="Display unormalized training samples",
+    )
+    parser.add_argument(
+        "--wb", dest="wb", action="store_true", help="Log to Weights & Biases"
+    )
+    parser.add_argument(
+        "--push-to-hub",
+        dest="push_to_hub",
+        action="store_true",
+        help="Push to Huggingface Hub",
+    )
     parser.add_argument(
         "--pretrained",
         dest="pretrained",
         action="store_true",
         help="Load pretrained parameters before starting the training",
     )
-    parser.add_argument("--rotation", dest="rotation", action="store_true", help="train with rotated documents")
+    parser.add_argument(
+        "--rotation",
+        dest="rotation",
+        action="store_true",
+        help="train with rotated documents",
+    )
     parser.add_argument(
         "--eval-straight",
         action="store_true",
         help="metrics evaluation with straight boxes instead of polygons to save time + memory",
     )
     parser.add_argument(
-        "--sched", type=str, default="poly", choices=["cosine", "onecycle", "poly"], help="scheduler to use"
+        "--sched",
+        type=str,
+        default="poly",
+        choices=["cosine", "onecycle", "poly"],
+        help="scheduler to use",
     )
-    parser.add_argument("--amp", dest="amp", help="Use Automatic Mixed Precision", action="store_true")
-    parser.add_argument("--find-lr", action="store_true", help="Gridsearch the optimal LR")
-    parser.add_argument("--early-stop", action="store_true", help="Enable early stopping")
-    parser.add_argument("--early-stop-epochs", type=int, default=5, help="Patience for early stopping")
-    parser.add_argument("--early-stop-delta", type=float, default=0.01, help="Minimum Delta for early stopping")
+    parser.add_argument(
+        "--amp", dest="amp", help="Use Automatic Mixed Precision", action="store_true"
+    )
+    parser.add_argument(
+        "--find-lr", action="store_true", help="Gridsearch the optimal LR"
+    )
+    parser.add_argument(
+        "--early-stop", action="store_true", help="Enable early stopping"
+    )
+    parser.add_argument(
+        "--early-stop-epochs", type=int, default=5, help="Patience for early stopping"
+    )
+    parser.add_argument(
+        "--early-stop-delta",
+        type=float,
+        default=0.01,
+        help="Minimum Delta for early stopping",
+    )
     args = parser.parse_args()
 
     return args
 
+
 if __name__ == "__main__":
-    #args = parse_args()
+    # args = parse_args()
     main()
