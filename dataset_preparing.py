@@ -69,6 +69,7 @@ def compute_sha256(image_path):
 def yolo_to_polygon(yolo_data, img_w, img_h):
     """Конвертирует YOLO аннотации в список полигонов."""
     polygons = []
+
     for line in yolo_data:
         parts = line.strip().split()
         if len(parts) < 5:
@@ -76,7 +77,7 @@ def yolo_to_polygon(yolo_data, img_w, img_h):
         try:
             x, y, w, h = map(float, parts[1:])
         except:
-            continue
+            return None
         if (
             x > 1.0
             or x < 0.0
@@ -87,7 +88,7 @@ def yolo_to_polygon(yolo_data, img_w, img_h):
             or h > 1.0
             or h < 0.0
         ):
-            continue
+            return None
         x, w = x * img_w, w * img_w
         y, h = y * img_h, h * img_h
 
@@ -142,6 +143,8 @@ def convert_dataset(dataset_path, desc="TRAIN"):
         if annotation_path:
             with open(annotation_path, "r", encoding="utf-8") as f:
                 polygons = yolo_to_polygon(f.readlines(), img_w, img_h)
+        if polygons is None:
+            continue
         if len(polygons) > 0:
             dataset[image_name] = {
                 "img_dimensions": (img_h, img_w),
