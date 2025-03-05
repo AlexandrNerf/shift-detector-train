@@ -5,5 +5,5 @@ cache: False
 
 save: True
 save_period: -1
-plots: False
+plots: True
 val: True

@@ -19,3 +19,4 @@ cls: 0.5
 
 conf: 0.25
 iou: 0.7
+max_det: 1000
